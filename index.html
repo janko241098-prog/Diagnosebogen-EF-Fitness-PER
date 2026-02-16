@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Diagnosebogen Fitness – EF (Offline)</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  margin:0;
+  background: linear-gradient(135deg,#1e3c72,#2a5298);
+}
+
+h1{
+  text-align:center;
+  color:white;
+  padding:20px;
+}
+
+.container{
+  max-width:1100px;
+  margin:20px auto;
+  background:white;
+  padding:20px;
+  border-radius:12px;
+}
+
+.question{
+  background:#f5f7fb;
+  padding:12px;
+  margin-bottom:15px;
+  border-radius:8px;
+}
+
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:8px;
+  background:#dd2476;
+  color:white;
+  cursor:pointer;
+  margin:5px;
+}
+
+.hidden{display:none;}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+  font-size:12px;
+}
+
+th,td{
+  border:1px solid #ccc;
+  padding:6px;
+  text-align:center;
+}
+
+.chartBox{
+  margin-top:30px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🏋️ Diagnosebogen Fitness EF</h1>
+
+<div class="container">
+
+<div id="startView">
+  <h2>Zugang wählen</h2>
+  <button onclick="showStudent()">Schüler*innen</button>
+  <button onclick="showTeacher()">Lehrkraft</button>
+</div>
+
+<div id="studentView" class="hidden">
+  <h2>Diagnosebogen</h2>
+  Name:<br>
+  <input type="text" id="name" style="width:100%;padding:8px"><br><br>
+
+  <form id="form">
+    <div id="questions"></div>
+    <button type="submit">Abschicken</button>
+  </form>
+</div>
+
+<div id="teacherView" class="hidden">
+  <h2>Auswertung</h2>
+  <button onclick="loadResults()">Ergebnisse laden</button>
+  <button onclick="clearAll()">Alle löschen</button>
+  <table id="table"></table>
+  <div id="charts"></div>
+</div>
+
+</div>
+
+<script>
+
+const questions=[
+"Ich habe Erfahrungen mit Fitnesstraining.",
+"Ich kenne die wichtigsten Muskelgruppen.",
+"Ich kann Übungen Muskelgruppen zuordnen.",
+"Ich weiß, was ein Kraftausdauerzirkel ist.",
+"Ich kenne Trainingsmethoden im Fitnessbereich.",
+"Ich kenne Intensität, Umfang, Dichte und Dauer.",
+"Ich kann Trainingsbelastung einschätzen.",
+"Ich weiß, wie man sich richtig aufwärmt.",
+"Ich kenne Kriterien für ein gutes Aufwärmen.",
+"Ich weiß, was muskuläre Disbalancen sind.",
+"Ich kenne Trainingsfortschritt‑Messung.",
+"Ich kann einen Trainingsplan erstellen.",
+"Ich kenne Übungen zur Kräftigung verschiedener Muskelgruppen.",
+"Ich kenne Yoga‑ und Pilates‑Übungen.",
+"Ich kann Fitnessformen Trainingszielen zuordnen."
+];
+
+const scale=["Trifft zu","Trifft mittel zu","Trifft weniger zu"];
+
+const qDiv=document.getElementById("questions");
+
+questions.forEach((q,i)=>{
+ let html=`<div class="question"><b>${i+1}. ${q}</b><br>`;
+ scale.forEach(s=>{
+  html+=`<label><input type="radio" name="q${i}" value="${s}" required> ${s}</label>`;
+ });
+ html+="</div>";
+ qDiv.innerHTML+=html;
+});
+
+form.onsubmit=e=>{
+ e.preventDefault();
+ const name=document.getElementById("name").value;
+ if(!name){alert("Name fehlt");return;}
+ let data=JSON.parse(localStorage.getItem("diag"))||[];
+ let obj={name};
+ questions.forEach((_,i)=>{
+  obj["F"+(i+1)]=document.querySelector(`input[name=q${i}]:checked`).value;
+ });
+ data.push(obj);
+ localStorage.setItem("diag",JSON.stringify(data));
+ alert("Gespeichert");
+ form.reset();
+};
+
+function showStudent(){
+ startView.classList.add("hidden");
+ studentView.classList.remove("hidden");
+}
+
+function showTeacher(){
+ if(prompt("Passwort:")=="fitnessEF"){
+  startView.classList.add("hidden");
+  teacherView.classList.remove("hidden");
+ }
+}
+
+function deleteEntry(i){
+ let data=JSON.parse(localStorage.getItem("diag"))||[];
+ data.splice(i,1);
+ localStorage.setItem("diag",JSON.stringify(data));
+ loadResults();
+}
+
+function clearAll(){
+ if(confirm("Alle löschen?")){
+  localStorage.removeItem("diag");
+  loadResults();
+ }
+}
+
+function loadResults(){
+ const data=JSON.parse(localStorage.getItem("diag"))||[];
+ const table=document.getElementById("table");
+ const charts=document.getElementById("charts");
+
+ if(!data.length){
+  table.innerHTML="Keine Daten";
+  charts.innerHTML="";
+  return;
+ }
+
+ let headers=Object.keys(data[0]);
+ let html="<tr>";
+ headers.forEach(h=>html+=`<th>${h}</th>`);
+ html+="<th>Löschen</th></tr>";
+
+ data.forEach((r,i)=>{
+  html+="<tr>";
+  headers.forEach(h=>html+=`<td>${r[h]}</td>`);
+  html+=`<td><button onclick="deleteEntry(${i})">X</button></td></tr>`;
+ });
+
+ table.innerHTML=html;
+
+ charts.innerHTML="";
+
+ questions.forEach((q,i)=>{
+  let c={"Trifft zu":0,"Trifft mittel zu":0,"Trifft weniger zu":0};
+  data.forEach(d=>c[d["F"+(i+1)]]++);
+
+  const div=document.createElement("div");
+  div.className="chartBox";
+  div.innerHTML=`<h3>Frage ${i+1}</h3>
+  <div>${c["Trifft zu"]} sicher | ${c["Trifft mittel zu"]} mittel | ${c["Trifft weniger zu"]} unsicher</div>`;
+  charts.appendChild(div);
+ });
+}
+
+</script>
+
+</body>
+</html>
